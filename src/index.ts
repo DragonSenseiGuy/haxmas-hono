@@ -7,6 +7,17 @@ app.get('/', (c) => {
   return c.text('Welcome to the Haxmas API - A Christmas Wishlist Service')
 })
 
+app.get('/api/debug', (c) => {
+  const url = new URL(c.req.url)
+  return c.json({
+    fullUrl: c.req.url,
+    pathname: url.pathname,
+    search: url.search,
+    queryEntries: Object.fromEntries(url.searchParams.entries()),
+    honoQuery: c.req.queries(),
+  })
+})
+
 const NAUGHTY_WORDS = ['coal', 'nothing', 'socks']
 const NICE_MESSAGES = [
   'Santa is checking his list twice...',
@@ -52,9 +63,8 @@ app.get('/api/christmas/fact', (c) => {
   return c.json({ fact })
 })
 
-app.get('/api/christmas/naughty-or-nice', (c) => {
-  const name = c.req.query('name')
-  if (!name) return c.json({ error: 'name query parameter is required' }, 400)
+app.get('/api/christmas/naughty-or-nice/:name', (c) => {
+  const name = c.req.param('name')
 
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
   const isNice = hash % 10 > 2
@@ -114,9 +124,25 @@ app.post('/api/christmas/letter-to-santa', async (c) => {
 })
 
 app.get('/api/christmas/tree', (c) => {
-  const height = Math.min(Math.max(Number(c.req.query('height')) || 5, 3), 15)
-  const lines: string[] = []
+  return c.json({
+    tree: generateTree(5),
+    height: 5,
+    decorations: { stars: 5, ornaments: 4 },
+    note: 'Use /api/christmas/tree/:height for custom height (3-15)',
+  })
+})
 
+app.get('/api/christmas/tree/:height', (c) => {
+  const height = Math.min(Math.max(Number(c.req.param('height')) || 5, 3), 15)
+  return c.json({
+    tree: generateTree(height),
+    height,
+    decorations: { stars: height, ornaments: height - 1 },
+  })
+})
+
+function generateTree(height: number): string {
+  const lines: string[] = []
   lines.push(' '.repeat(height) + '*')
   for (let i = 1; i <= height; i++) {
     const spaces = ' '.repeat(height - i)
@@ -125,18 +151,29 @@ app.get('/api/christmas/tree', (c) => {
   }
   lines.push(' '.repeat(height - 1) + '|||')
   lines.push(' '.repeat(height - 1) + '|||')
+  return lines.join('\n')
+}
 
+app.get('/api/christmas/gift-suggestion', (c) => {
   return c.json({
-    tree: lines.join('\n'),
-    height,
-    decorations: { stars: height, ornaments: height - 1 },
+    recipient: 'someone special',
+    budgetTier: 'medium',
+    suggestion: 'Board game',
+    message: 'For someone special, we suggest: Board game',
+    allOptionsInTier: ['Board game', 'Cozy blanket', 'Headphones', 'Art supplies', 'Plant'],
+    note: 'Use /api/christmas/gift-suggestion/:budget or /api/christmas/gift-suggestion/:budget/:recipient for custom options',
   })
 })
 
-app.get('/api/christmas/gift-suggestion', (c) => {
-  const budget = c.req.query('budget')
-  const recipient = c.req.query('recipient') || 'someone special'
+app.get('/api/christmas/gift-suggestion/:budget', (c) => {
+  return getGiftSuggestion(c.req.param('budget'), 'someone special')
+})
 
+app.get('/api/christmas/gift-suggestion/:budget/:recipient', (c) => {
+  return getGiftSuggestion(c.req.param('budget'), c.req.param('recipient'))
+})
+
+function getGiftSuggestion(budget: string, recipient: string) {
   const gifts: Record<string, string[]> = {
     low: ['Handwritten card', 'Homemade cookies', 'Photo album', 'Knitted scarf', 'Book'],
     medium: ['Board game', 'Cozy blanket', 'Headphones', 'Art supplies', 'Plant'],
@@ -151,14 +188,14 @@ app.get('/api/christmas/gift-suggestion', (c) => {
   const suggestions = gifts[tier]
   const picked = suggestions[Math.floor(Math.random() * suggestions.length)]
 
-  return c.json({
+  return Response.json({
     recipient,
     budgetTier: tier,
     suggestion: picked,
     message: `For ${recipient}, we suggest: ${picked}`,
     allOptionsInTier: suggestions,
   })
-})
+}
 
 app.get("/api/wishes", (c) => {
   try {

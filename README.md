@@ -87,11 +87,10 @@ Get a random Christmas fact.
 }
 ```
 
-#### GET /api/christmas/naughty-or-nice?name=NAME
+#### GET /api/christmas/naughty-or-nice/:name
 Check if someone is on the naughty or nice list.
 
-**Query parameters:**
-- `name` (required): The name to check
+**Example:** `/api/christmas/naughty-or-nice/Alice`
 
 **Response:**
 ```json
@@ -139,11 +138,13 @@ Send a letter to Santa. The wish is automatically added to the wishlist.
 }
 ```
 
-#### GET /api/christmas/tree?height=HEIGHT
+#### GET /api/christmas/tree
+#### GET /api/christmas/tree/:height
 Generate an ASCII Christmas tree.
 
-**Query parameters:**
-- `height` (optional): Tree height, 3-15 (default: 5)
+**Examples:**
+- `/api/christmas/tree` - Default height 5
+- `/api/christmas/tree/10` - Height 10
 
 **Response:**
 ```json
@@ -154,20 +155,25 @@ Generate an ASCII Christmas tree.
 }
 ```
 
-#### GET /api/christmas/gift-suggestion?budget=AMOUNT&recipient=NAME
+#### GET /api/christmas/gift-suggestion
+#### GET /api/christmas/gift-suggestion/:budget
+#### GET /api/christmas/gift-suggestion/:budget/:recipient
 Get a gift suggestion based on budget.
 
-**Query parameters:**
-- `budget` (optional): Budget amount in dollars (low: <25, medium: 25-100, high: >100)
-- `recipient` (optional): Who the gift is for
+**Examples:**
+- `/api/christmas/gift-suggestion` - Default suggestion
+- `/api/christmas/gift-suggestion/50` - Medium budget
+- `/api/christmas/gift-suggestion/150/Mom` - High budget for Mom
+
+Budget tiers: low (<25), medium (25-100), high (>100)
 
 **Response:**
 ```json
 {
   "recipient": "Mom",
-  "budgetTier": "medium",
-  "suggestion": "Cozy blanket",
-  "message": "For Mom, we suggest: Cozy blanket",
-  "allOptionsInTier": ["Board game", "Cozy blanket", "Headphones", "Art supplies", "Plant"]
+  "budgetTier": "high",
+  "suggestion": "Cooking class",
+  "message": "For Mom, we suggest: Cooking class",
+  "allOptionsInTier": ["Smart watch", "Weekend getaway", "Designer item", "Cooking class", "Concert tickets"]
 }
 ```
