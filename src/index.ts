@@ -91,11 +91,17 @@ app.post('/api/christmas/letter-to-santa', async (c) => {
   const isNaughtyWish = NAUGHTY_WORDS.some(w => wish.toLowerCase().includes(w))
   const niceMessage = NICE_MESSAGES[Math.floor(Math.random() * NICE_MESSAGES.length)]
 
-  const result = createWish(`[Letter from ${name}]: ${wish}`)
+  let wishId: number | null = null
+  try {
+    const result = createWish(`[Letter from ${name}]: ${wish}`)
+    wishId = result.id
+  } catch {
+    // Database not available, continue without saving
+  }
 
   return c.json({
     received: true,
-    wishId: result.id,
+    wishId,
     from: name,
     wish,
     santaResponse: isNaughtyWish
@@ -154,40 +160,56 @@ app.get('/api/christmas/gift-suggestion', (c) => {
   })
 })
 
-const port = Number(process.env.PORT) || 3000
-
-export default {
-  port,
-  fetch: app.fetch,
-}
-
-app.get("/api/wishes", (c) => c.json(listWishes()))
+app.get("/api/wishes", (c) => {
+  try {
+    return c.json(listWishes())
+  } catch {
+    return c.json({ error: "Database not available" }, 503)
+  }
+})
 
 app.post("/api/wishes", async (c) => {
   const body = await c.req.json().catch(() => null)
   const item = (body?.item ?? "").toString().trim()
   if (!item) return c.json({ error: "item is required" }, 400)
 
-  return c.json(createWish(item), 201)
+  try {
+    return c.json(createWish(item), 201)
+  } catch {
+    return c.json({ error: "Database not available" }, 503)
+  }
 })
 
 app.patch("/api/wishes/:id/fulfill", (c) => {
   const id = Number(c.req.param("id"))
   if (!Number.isFinite(id)) return c.json({ error: "bad id" }, 400)
 
-  const res = fulfillWish(id)
-  if (res.changes === 0) return c.json({ error: "not found" }, 404)
-
-  return c.json({ ok: true })
+  try {
+    const res = fulfillWish(id)
+    if (res.changes === 0) return c.json({ error: "not found" }, 404)
+    return c.json({ ok: true })
+  } catch {
+    return c.json({ error: "Database not available" }, 503)
+  }
 })
 
 app.delete("/api/wishes/:id", (c) => {
   const id = Number(c.req.param("id"))
   if (!Number.isFinite(id)) return c.json({ error: "bad id" }, 400)
 
-  const res = deleteWish(id)
-  if (res.changes === 0) return c.json({ error: "not found" }, 404)
-
-  return c.json({ ok: true })
+  try {
+    const res = deleteWish(id)
+    if (res.changes === 0) return c.json({ error: "not found" }, 404)
+    return c.json({ ok: true })
+  } catch {
+    return c.json({ error: "Database not available" }, 503)
+  }
 })
+
+const port = Number(process.env.PORT) || 3000
+
+export default {
+  port,
+  fetch: app.fetch,
+}
 
